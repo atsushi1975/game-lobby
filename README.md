@@ -87,7 +87,8 @@ docker compose up -d --build
 {"title": "...", "version": "20261029-2251-b7bc7eb", "status": "idle|waiting|playing"}
 ```
 
-- `idle`: 起動中・アイドル / `waiting`: 起動中・開始待ち(参加可・観戦可) / `playing`: 起動中・プレイ中
+- `idle`: 起動中・アイドル(誰もいない=ここから入る) / `waiting`: 起動中・開始待ち(参加可・観戦可) / `playing`: 起動中・プレイ中
+- ロビー画面の「入れる部屋」の集計は `waiting + idle` の合計。
 - 「停止中」はサーバーが返す値ではない。ロビー側が「応答なし・異常」を `off` として扱う。
 - version は「コミット日時-コミットハッシュ」形式。ファイル `VERSION` から読む(無ければ `"dev"`)。
 

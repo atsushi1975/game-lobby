@@ -91,9 +91,10 @@ setNote("", null);
 
 function render(){
   var rows=servers.slice().sort(function(a,b){return ORDER[a.status]-ORDER[b.status];});
-  var n={waiting:0,playing:0,off:0};
+  var n={waiting:0,playing:0,off:0,idle:0};
   servers.forEach(function(s){if(n[s.status]!==undefined)n[s.status]++;});
-  document.getElementById("sum").innerHTML="入れる部屋 <b>"+n.waiting+"</b>　プレイ中 <b>"+n.playing+"</b>　停止 <b>"+n.off+"</b>";
+  // idle(起動中・誰もいない=ここから入れる)も「入れる部屋」に含める。
+  document.getElementById("sum").innerHTML="入れる部屋 <b>"+(n.waiting+n.idle)+"</b>　プレイ中 <b>"+n.playing+"</b>　停止 <b>"+n.off+"</b>";
   var ul=document.getElementById("list");
   ul.innerHTML="";
   rows.forEach(function(s){

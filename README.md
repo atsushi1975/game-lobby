@@ -65,6 +65,7 @@ docker compose up -d --build
       "game": "catan",
       "url": "/catan1/",
       "port": null,
+      "playing_rooms": null,
       "status": "idle",
       "version": "20261029-2251-b7bc7eb",
       "stale": false
@@ -75,6 +76,9 @@ docker compose up -d --build
 
 - `status`: `idle` / `waiting` / `playing` / `off`(4値。`off` は応答なし・異常を意味する)
 - `url` / `port`: `servers.json` の値をそのまま出す(無い方は `null`)。内部URL(`health`)は含めない。
+- `playing_rooms`: 複数ルーム型(例: 犯人は踊る)だけが整数。`/health` の `playing_rooms` が
+  整数(bool を除く)で 0 以上のときだけ採用し、無い・文字列・負数・小数・bool のときは `null`。
+  停止中(`off`)も `null`。カタンのような単一ルーム型は常に `null`。
 - `version`: health の version 文字列(文字列でなければ null)
 - `stale`: 同じ game の中で最大 version より小さい(=古い)サーバーへの `true`
 - 巡回が一度も終わっていない間は `updated: null` / `servers: []`
@@ -84,11 +88,13 @@ docker compose up -d --build
 各ゲームサーバーは共通仕様の `GET /health` を持つ(認証なし)。
 
 ```json
-{"title": "...", "version": "20261029-2251-b7bc7eb", "status": "idle|waiting|playing"}
+{"title": "...", "version": "20261029-2251-b7bc7eb", "status": "idle|waiting|playing", "playing_rooms": 1}
 ```
 
 - `idle`: 起動中・アイドル(誰もいない=ここから入る) / `waiting`: 起動中・開始待ち(参加可・観戦可) / `playing`: 起動中・プレイ中
-- ロビー画面の「入れる部屋」の集計は `waiting + idle` の合計。
+- `playing_rooms`: 省略可。複数ルーム型(犯人は踊る)だけが 0 以上の整数を返す。
+- ロビー画面の「入れる部屋」は、複数ルーム型は `off` 以外なら 1 室として数え、それ以外は `waiting + idle` の合計。
+- 複数ルーム型は `off` 以外ならボタンが常に「入る」、チップは `playing_rooms` が 1 以上なら「プレイ中(N室)」。
 - 「停止中」はサーバーが返す値ではない。ロビー側が「応答なし・異常」を `off` として扱う。
 - version は「コミット日時-コミットハッシュ」形式。ファイル `VERSION` から読む(無ければ `"dev"`)。
 

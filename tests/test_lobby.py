@@ -277,6 +277,43 @@ class LobbyTests(unittest.TestCase):
 
     # --- (4) /api/servers のレスポンスの形 ---
 
+    def test_poller_playing_rooms_integer(self):
+        for rooms in (0, 1, 3):
+            with self.subTest(rooms=rooms):
+                entry = self.poll_entry({
+                    "title": "犯人は踊る",
+                    "version": "20261030-0912-e41d07a",
+                    "status": "playing",
+                    "playing_rooms": rooms,
+                })
+                self.assertEqual(entry["status"], "playing")
+                self.assertEqual(entry["playing_rooms"], rooms)
+
+    def test_poller_playing_rooms_missing_or_invalid(self):
+        for rooms in ("2", -1, True, False, 1.5, None):
+            with self.subTest(rooms=rooms):
+                entry = self.poll_entry({
+                    "title": "犯人は踊る",
+                    "version": "20261030-0912-e41d07a",
+                    "status": "playing",
+                    "playing_rooms": rooms,
+                })
+                self.assertIsNone(entry["playing_rooms"])
+
+        entry = self.poll_entry({"title": "カタン", "version": "20261029-2251-b7bc7eb", "status": "idle"})
+        self.assertIsNone(entry["playing_rooms"])
+
+    def test_poller_playing_rooms_none_when_off(self):
+        poller = LobbyPoller([
+            {"name": "down", "game": "hannin", "health": "http://127.0.0.1:1/health", "url": "/x/"},
+        ], poll_interval=0.05, timeout=0.5)
+        try:
+            entries = self.wait_poller_updated(poller)
+            self.assertEqual(entries[0]["status"], "off")
+            self.assertIsNone(entries[0]["playing_rooms"])
+        finally:
+            poller.stop()
+
     def test_api_servers_shape(self):
         self.httpd, self.thread, base = start_http_server(FakeHealthServer)
         self.health_url = base + "/health"
@@ -300,7 +337,7 @@ class LobbyTests(unittest.TestCase):
             by_name = {e["name"]: e for e in data["servers"]}
             url_entry = by_name["url指定"]
             port_entry = by_name["port指定"]
-            self.assertEqual(set(url_entry.keys()), {"name", "game", "url", "port", "status", "version", "stale"})
+            self.assertEqual(set(url_entry.keys()), {"name", "game", "url", "port", "status", "version", "playing_rooms", "stale"})
             self.assertNotIn("health", url_entry)
             self.assertNotIn("health", port_entry)
             self.assertEqual(url_entry["url"], "/catan1/")
@@ -311,6 +348,7 @@ class LobbyTests(unittest.TestCase):
                 self.assertEqual(entry["status"], "idle")
                 self.assertEqual(entry["version"], "20261029-2251-b7bc7eb")
                 self.assertIs(entry["stale"], False)
+                self.assertIsNone(entry["playing_rooms"])
 
             status2, health = http_get(api_base + "/health")
             self.assertEqual(status2, 200)
@@ -328,7 +366,56 @@ class LobbyTests(unittest.TestCase):
                 api_thread = None
             poller.stop()
 
+    def test_api_servers_playing_rooms(self):
+        httpd, thread, base = start_http_server(FakeHealthServer, payload={
+            "title": "犯人は踊る",
+            "version": "20261030-0912-e41d07a",
+            "status": "playing",
+            "playing_rooms": 2,
+        })
+        poller = LobbyPoller([
+            {"name": "hannin", "game": "hannin", "health": base + "/health", "url": None, "port": 6300},
+        ], poll_interval=0.05)
+        LobbyHandler.poller = poller
+        api_httpd = None
+        api_thread = None
+        try:
+            api_httpd, api_thread, api_base = start_http_server(LobbyHandler)
+            self.wait_poller_updated(poller)
+            status, data = http_get(api_base + "/api/servers")
+            self.assertEqual(status, 200)
+            entry = data["servers"][0]
+            self.assertEqual(entry["playing_rooms"], 2)
+            self.assertNotIn("health", entry)
+        finally:
+            LobbyHandler.poller = None
+            if api_httpd is not None:
+                api_httpd.shutdown()
+                api_httpd.server_close()
+                api_httpd = None
+            if api_thread is not None:
+                api_thread.join(timeout=5)
+                api_thread = None
+            poller.stop()
+            httpd.shutdown()
+            httpd.server_close()
+            thread.join(timeout=5)
+
     # --- helpers ---
+
+    def poll_entry(self, payload=None, **kwargs):
+        """1台分の /health を立てて巡回し、その要素を返す。"""
+        httpd, thread, base = start_http_server(FakeHealthServer, payload=payload, **kwargs)
+        poller = LobbyPoller([
+            {"name": "x", "game": "hannin", "health": base + "/health", "url": "/x/"},
+        ], poll_interval=0.05)
+        try:
+            return self.wait_poller_updated(poller)[0]
+        finally:
+            poller.stop()
+            httpd.shutdown()
+            httpd.server_close()
+            thread.join(timeout=5)
 
     def wait_poller_updated(self, poller, timeout=10.0):
         end = time.monotonic() + timeout

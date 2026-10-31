@@ -69,6 +69,11 @@ var LABEL={idle:"アイドル",waiting:"開始待ち",playing:"プレイ中",off
 var ORDER={waiting:0,idle:1,playing:2,off:3};
 var servers=[];
 
+// 複数ルーム型 = /health が playing_rooms を整数で返すサーバー(犯人は踊る)。
+function isMulti(s){
+  return typeof s.playing_rooms==="number";
+}
+
 function fmtUpdated(iso){
   if(!iso) return "";
   var d=new Date(iso);
@@ -93,8 +98,15 @@ function render(){
   var rows=servers.slice().sort(function(a,b){return ORDER[a.status]-ORDER[b.status];});
   var n={waiting:0,playing:0,off:0,idle:0};
   servers.forEach(function(s){if(n[s.status]!==undefined)n[s.status]++;});
-  // idle(起動中・誰もいない=ここから入れる)も「入れる部屋」に含める。
-  document.getElementById("sum").innerHTML="入れる部屋 <b>"+(n.waiting+n.idle)+"</b>　プレイ中 <b>"+n.playing+"</b>　停止 <b>"+n.off+"</b>";
+  // 入れる部屋: 複数ルーム型は off 以外なら1室として数える。
+  // それ以外は idle(誰もいない=ここから入れる)と waiting を数える。
+  var joinable=0;
+  servers.forEach(function(s){
+    if(s.status==="off") return;
+    if(isMulti(s)) joinable++;
+    else if(s.status==="waiting"||s.status==="idle") joinable++;
+  });
+  document.getElementById("sum").innerHTML="入れる部屋 <b>"+joinable+"</b>　プレイ中 <b>"+n.playing+"</b>　停止 <b>"+n.off+"</b>";
   var ul=document.getElementById("list");
   ul.innerHTML="";
   rows.forEach(function(s){
@@ -115,7 +127,8 @@ function render(){
       }else if(s.port!==null && s.port!==undefined){
         a.setAttribute("href", location.protocol+"//"+location.hostname+":"+s.port+"/");
       }
-      a.textContent=s.status==="playing"?"観戦する":"入る";
+      // 複数ルーム型は off 以外なら常に「入る」。
+      a.textContent=(!isMulti(s)&&s.status==="playing")?"観戦する":"入る";
       li.appendChild(a);
     }
     var main=li.querySelector(".main");
@@ -127,7 +140,11 @@ function render(){
     var dot=document.createElement("span");
     dot.className="dot";
     chip.appendChild(dot);
-    chip.appendChild(document.createTextNode(LABEL[s.status]));
+    var label=LABEL[s.status];
+    if(isMulti(s)&&s.playing_rooms>=1){
+      label="プレイ中("+s.playing_rooms+"室)";
+    }
+    chip.appendChild(document.createTextNode(label));
     meta.appendChild(chip);
     if(s.version){
       var ver=document.createElement("span");

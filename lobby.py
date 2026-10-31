@@ -212,6 +212,8 @@ class LobbyPoller:
                 "port": server.get("port"),
                 "status": res["status"],
                 "version": res["version"],
+                # 停止中は常に null。複数ルーム型以外は _fetch が None を返している。
+                "playing_rooms": res["playing_rooms"] if res["status"] != OFF else None,
                 "stale": False,
             })
         flags = compute_stale([
@@ -234,27 +236,36 @@ class LobbyPoller:
             self._updated = datetime.now(timezone.utc).isoformat()
             self._entries = api_entries
 
+    def _off(self, server):
+        return {"name": display_name(server, None), "status": OFF, "version": None, "title": None, "playing_rooms": None}
+
     def _fetch(self, server):
         """GET /health を最大2秒で1回。リダイレクトは追わない。最大4KB。"""
         title = None
         try:
             with _OPENER.open(server["health"], timeout=self._timeout) as resp:
                 if resp.status != 200:
-                    return {"name": display_name(server, None), "status": OFF, "version": None, "title": None}
+                    return self._off(server)
                 body = resp.read(self._max_body_bytes)
             data = json.loads(body.decode("utf-8", "replace"))
             if not isinstance(data, dict):
-                return {"name": display_name(server, None), "status": OFF, "version": None, "title": None}
+                return self._off(server)
             status = data.get("status")
             if status not in STATUSES:
-                return {"name": display_name(server, None), "status": OFF, "version": None, "title": None}
+                return self._off(server)
             version = data.get("version")
             version = version if isinstance(version, str) and version else None
             t = data.get("title")
             title = t if isinstance(t, str) else None
-            return {"name": display_name(server, title), "status": status, "version": version, "title": title}
+            # 複数ルーム型(犯人は踊る)だけが playing_rooms を返す。
+            # 整数(bool を除く)で 0 以上のときだけ採用し、それ以外は None。
+            rooms = data.get("playing_rooms")
+            if not (isinstance(rooms, int) and not isinstance(rooms, bool) and rooms >= 0):
+                rooms = None
+            return {"name": display_name(server, title), "status": status, "version": version,
+                    "title": title, "playing_rooms": rooms}
         except Exception:
-            return {"name": display_name(server, None), "status": OFF, "version": None, "title": None}
+            return self._off(server)
 
 
 def lobby_version():

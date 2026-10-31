@@ -1,0 +1,20 @@
+[
+  {
+    "name": "カタン 部屋1",
+    "game": "catan",
+    "health": "http://catan_001:8000/health",
+    "url": "/catan1/"
+  },
+  {
+    "name": "カタン 部屋2",
+    "game": "catan",
+    "health": "http://catan_002:8000/health",
+    "url": "/catan2/"
+  },
+  {
+    "name": "犯人は踊る",
+    "game": "hannin",
+    "health": "http://hannin_001:8000/health",
+    "url": "/hannin1/"
+  }
+]

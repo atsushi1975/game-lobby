@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>共通ロビー（モック）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#f1f4f2;--ink:#16282b;--sub:#5d7074;--line:#cfd9d6;--paper:#fff;
+  --wait:#14795f;--play:#b4651a;--idle:#4a6f8a;--off:#8a9799;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#11191b;--ink:#e6efed;--sub:#96a9ad;--line:#2a3b3e;--paper:#172326;
+    --wait:#4fc29c;--play:#e39a52;--idle:#7fa6c2;--off:#6f7f82;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11191b;--ink:#e6efed;--sub:#96a9ad;--line:#2a3b3e;--paper:#172326;
+  --wait:#4fc29c;--play:#e39a52;--idle:#7fa6c2;--off:#6f7f82;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;line-height:1.6}
+main{max-width:560px;margin:0 auto;padding:28px 16px 40px}
+h1{font-size:1.6rem;margin:0 0 4px;letter-spacing:.02em}
+.sum{margin:0 0 20px;color:var(--sub);font-size:.95rem}
+.sum b{color:var(--ink)}
+ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.row{display:grid;grid-template-columns:7px 1fr auto;align-items:center;gap:14px;
+  background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden;padding-right:14px}
+.stripe{align-self:stretch;background:var(--c)}
+.row.waiting{--c:var(--wait)}.row.playing{--c:var(--play)}
+.row.idle{--c:var(--idle)}.row.off{--c:var(--off);border-style:dashed}
+.row.off .name{color:var(--sub)}
+.main{padding:12px 0}
+.name{font-size:1.15rem;font-weight:700;margin:0}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:4px;font-size:.85rem;color:var(--sub)}
+.chip{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--c);font-weight:700;font-size:.9rem}
+.chip:focus-visible,.go:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.dot{width:10px;height:10px;display:inline-block;border:2px solid var(--c)}
+.waiting .dot{background:var(--c);border-radius:50%}
+.idle .dot{border-radius:50%}
+.playing .dot{background:var(--c);border-radius:2px}
+.off .dot{height:0;border-width:0 0 2px;width:12px}
+.ver{font-variant-numeric:tabular-nums;font-size:.8rem}
+.old{border:1px solid var(--play);color:var(--play);border-radius:4px;padding:0 6px;font-size:.75rem}
+.go{all:unset;cursor:pointer;text-align:center;min-width:5.6em;padding:9px 14px;border-radius:6px;
+  font-weight:700;font-size:.95rem;background:var(--c);color:var(--paper)}
+.row.off .go{background:transparent;color:var(--off);border:1px solid var(--line);cursor:default}
+.note{margin-top:22px;font-size:.8rem;color:var(--sub)}
+</style>
+</head>
+<body>
+<main>
+  <h1>ゲームロビー</h1>
+  <p class="sum" id="sum"></p>
+  <ul id="list"></ul>
+  <p class="note">これはモックです。状態の文字をタップすると切り替わります。実際は各サーバーの /health を5秒おきに巡回して表示します。<br>最終更新 <span id="ts"></span></p>
+</main>
+<script>
+var servers=[
+  {name:"カタン 部屋1",game:"catan",version:"20261029-2251-b7bc7eb",status:"waiting"},
+  {name:"カタン 部屋2",game:"catan",version:"20261025-1810-9f3a2c1",status:"playing"},
+  {name:"カタン 部屋3",game:"catan",version:null,status:"off"},
+  {name:"犯人は踊る",game:"hannin",version:"20261030-0912-e41d07a",status:"idle"}
+];
+var LABEL={idle:"アイドル",waiting:"開始待ち",playing:"プレイ中",off:"停止中"};
+var NEXT={idle:"waiting",waiting:"playing",playing:"off",off:"idle"};
+var ORDER={waiting:0,idle:1,playing:2,off:3};
+function latest(game){
+  return servers.filter(function(s){return s.game===game&&s.version}).map(function(s){return s.version}).sort().pop();
+}
+function render(){
+  var rows=servers.slice().sort(function(a,b){return ORDER[a.status]-ORDER[b.status]});
+  var n={waiting:0,playing:0,off:0};
+  servers.forEach(function(s){if(n[s.status]!==undefined)n[s.status]++});
+  document.getElementById("sum").innerHTML="入れる部屋 <b>"+n.waiting+"</b>　プレイ中 <b>"+n.playing+"</b>　停止 <b>"+n.off+"</b>";
+  var ul=document.getElementById("list");ul.innerHTML="";
+  rows.forEach(function(s){
+    var li=document.createElement("li");li.className="row "+s.status;
+    var old=s.version&&s.version<latest(s.game);
+    var go=s.status==="off"?"停止中":s.status==="playing"?"観戦する":"入る";
+    li.innerHTML='<div class="stripe"></div><div class="main"><h2 class="name"></h2><div class="meta">'+
+      '<button class="chip" type="button"><span class="dot"></span>'+LABEL[s.status]+'</button>'+
+      (s.version?'<span class="ver">'+s.version+'</span>':'')+(old?'<span class="old">更新待ち</span>':'')+
+      '</div></div><a class="go" href="#">'+go+'</a>';
+    li.querySelector(".name").textContent=s.name;
+    li.querySelector(".chip").onclick=function(){s.status=NEXT[s.status];render()};
+    ul.appendChild(li);
+  });
+  var d=new Date();
+  document.getElementById("ts").textContent=d.toTimeString().slice(0,8);
+}
+render();setInterval(function(){document.getElementById("ts").textContent=new Date().toTimeString().slice(0,8)},5000);
+</script>
+</body>
+</html>

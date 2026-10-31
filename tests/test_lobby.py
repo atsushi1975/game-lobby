@@ -6,6 +6,7 @@ Run: python3 -m unittest discover -s tests -p 'test_*.py' -v
 import json
 import os
 import sys
+import tempfile
 import threading
 import time
 import unittest
@@ -114,27 +115,89 @@ class LobbyTests(unittest.TestCase):
         self.assertEqual(load_servers("/nonexistent/path/servers.json"), [])
 
     def test_load_servers_corrupt_json(self):
-        import tempfile
         with tempfile.TemporaryDirectory() as d:
             p = os.path.join(d, "servers.json")
             with open(p, "w", encoding="utf-8") as f:
                 f.write("{ broken json !!")
             self.assertEqual(load_servers(p), [])
 
-    def test_load_servers_skips_missing_required(self):
-        import tempfile
+    def _load_servers_json(self, entries):
         with tempfile.TemporaryDirectory() as d:
             p = os.path.join(d, "servers.json")
             with open(p, "w", encoding="utf-8") as f:
-                json.dump([
-                    {"name": "ok", "game": "catan", "health": "http://catan_001:8000/health", "url": "/catan1/"},
-                    {"name": "no-url", "game": "catan", "health": "http://catan_002:8000/health"},
-                    {"game": "catan", "health": "http://catan_003:8000/health", "url": "/catan3/"},
-                ], f)
-            servers = load_servers(p)
-            self.assertEqual(len(servers), 2)
-            self.assertEqual(servers[0]["name"], "ok")
-            self.assertIsNone(servers[1]["name"])
+                json.dump(entries, f)
+            return load_servers(p)
+
+    def test_load_servers_url_only(self):
+        servers = self._load_servers_json([
+            {"name": "url-only", "game": "catan", "health": "http://catan_001:8000/health", "url": "/catan1/"},
+        ])
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]["url"], "/catan1/")
+        self.assertIsNone(servers[0]["port"])
+
+    def test_load_servers_port_only(self):
+        servers = self._load_servers_json([
+            {"name": "port-only", "game": "catan", "health": "http://catan_001:8000/health", "port": 6100},
+        ])
+        self.assertEqual(len(servers), 1)
+        self.assertIsNone(servers[0]["url"])
+        self.assertEqual(servers[0]["port"], 6100)
+
+    def test_load_servers_url_and_port(self):
+        servers = self._load_servers_json([
+            {"name": "both", "game": "catan", "health": "http://catan_001:8000/health",
+             "url": "https://example.com/catan1/", "port": 6100},
+        ])
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]["url"], "https://example.com/catan1/")
+        self.assertEqual(servers[0]["port"], 6100)
+
+    def test_load_servers_skips_without_url_and_port(self):
+        servers = self._load_servers_json([
+            {"name": "no-link", "game": "catan", "health": "http://catan_002:8000/health"},
+        ])
+        self.assertEqual(servers, [])
+
+    def test_load_servers_skips_missing_game_or_health(self):
+        servers = self._load_servers_json([
+            {"name": "ok", "game": "catan", "health": "http://catan_001:8000/health", "url": "/catan1/"},
+            {"name": "no-health", "game": "catan", "url": "/catan2/"},
+            {"name": "no-game", "health": "http://catan_003:8000/health", "url": "/catan3/"},
+        ])
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]["name"], "ok")
+
+    def test_load_servers_invalid_ports(self):
+        for port in (0, 70000, "6100", True, False, 1.5, -1):
+            with self.subTest(port=port):
+                servers = self._load_servers_json([
+                    {"name": "bad", "game": "catan", "health": "http://catan_001:8000/health", "port": port},
+                ])
+                self.assertEqual(servers, [])
+
+    def test_load_servers_valid_port_bounds(self):
+        servers = self._load_servers_json([
+            {"name": "low", "game": "catan", "health": "http://catan_001:8000/health", "port": 1},
+            {"name": "high", "game": "catan", "health": "http://catan_002:8000/health", "port": 65535},
+        ])
+        self.assertEqual([s["port"] for s in servers], [1, 65535])
+
+    def test_load_servers_rejects_unsafe_url(self):
+        for url in ("javascript:alert(1)", "ftp://example.com/", "data:text/html,x", ""):
+            with self.subTest(url=url):
+                servers = self._load_servers_json([
+                    {"name": "bad", "game": "catan", "health": "http://catan_001:8000/health", "url": url},
+                ])
+                self.assertEqual(servers, [])
+
+    def test_load_servers_accepts_allowed_url_schemes(self):
+        servers = self._load_servers_json([
+            {"name": "http", "game": "catan", "health": "http://catan_001:8000/health", "url": "http://example.com/a"},
+            {"name": "https", "game": "catan", "health": "http://catan_002:8000/health", "url": "https://example.com/b"},
+            {"name": "path", "game": "catan", "health": "http://catan_003:8000/health", "url": "/cantan3/"},
+        ])
+        self.assertEqual([s["url"] for s in servers], ["http://example.com/a", "https://example.com/b", "/cantan3/"])
 
     # --- (3) 巡回結果 (実HTTPサーバー立てて) ---
 
@@ -218,7 +281,8 @@ class LobbyTests(unittest.TestCase):
         self.httpd, self.thread, base = start_http_server(FakeHealthServer)
         self.health_url = base + "/health"
         poller = LobbyPoller([
-            {"name": "カタン 部屋1", "game": "catan", "health": self.health_url, "url": "/catan1/"},
+            {"name": "url指定", "game": "catan", "health": self.health_url, "url": "/catan1/", "port": None},
+            {"name": "port指定", "game": "catan", "health": self.health_url, "url": None, "port": 6100},
         ], poll_interval=0.05)
         LobbyHandler.poller = poller
         api_httpd = None
@@ -226,18 +290,27 @@ class LobbyTests(unittest.TestCase):
         try:
             api_httpd, api_thread, api_base = start_http_server(LobbyHandler)
             entries = self.wait_poller_updated(poller)
+            self.assertEqual(len(entries), 2)
             self.assertEqual(entries[0]["status"], "idle")
             status, data = http_get(api_base + "/api/servers")
             self.assertEqual(status, 200)
             self.assertEqual(set(data.keys()), {"updated", "servers"})
             self.assertIsNotNone(data["updated"])
-            self.assertEqual(len(data["servers"]), 1)
-            entry = data["servers"][0]
-            self.assertEqual(set(entry.keys()), {"name", "game", "url", "status", "version", "stale"})
-            self.assertNotIn("health", entry)
-            self.assertEqual(entry["status"], "idle")
-            self.assertEqual(entry["version"], "20261029-2251-b7bc7eb")
-            self.assertIs(entry["stale"], False)
+            self.assertEqual(len(data["servers"]), 2)
+            by_name = {e["name"]: e for e in data["servers"]}
+            url_entry = by_name["url指定"]
+            port_entry = by_name["port指定"]
+            self.assertEqual(set(url_entry.keys()), {"name", "game", "url", "port", "status", "version", "stale"})
+            self.assertNotIn("health", url_entry)
+            self.assertNotIn("health", port_entry)
+            self.assertEqual(url_entry["url"], "/catan1/")
+            self.assertIsNone(url_entry["port"])
+            self.assertIsNone(port_entry["url"])
+            self.assertEqual(port_entry["port"], 6100)
+            for entry in (url_entry, port_entry):
+                self.assertEqual(entry["status"], "idle")
+                self.assertEqual(entry["version"], "20261029-2251-b7bc7eb")
+                self.assertIs(entry["stale"], False)
 
             status2, health = http_get(api_base + "/health")
             self.assertEqual(status2, 200)

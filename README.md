@@ -37,15 +37,21 @@ docker compose up -d --build
     "name": "カタン 部屋1",
     "game": "catan",
     "health": "http://catan_001:8000/health",
-    "url": "/catan1/"
+    "port": 6100
   }
 ]
 ```
 
 - `health`: ロビーが巡回する内部URL(GET /health)。
-- `url`: ブラウザに見せるリンク先(別物)。
+- `url`: ブラウザに見せるリンク先(別物)。`http://` / `https://` / `/` で始まる文字列のみ有効。
+- `port`: ブラウザに見せるリンク先のポート番号(整数 1〜65535)。`url` が無いときに使う。
+- `url` と `port` の両方があるときは `url` を優先する(画面側で `port` は使わない)。
+- `url` を省略した場合は、ロビーを開いているアドレスのホスト名と `port` からリンクを組み立てる
+  (`location.protocol + "//" + location.hostname + ":" + port + "/"`)。
 - `name`: 省略可(省略時は health の title → health URL のホスト名の順で代用)。
-- 必須項目(`game` / `health` / `url`)が欠けた要素は警告を出して読み飛ばす。起動は継続する。
+- `game` / `health` は必須。`url` / `port` はどちらか1つ以上必要。
+- 必須項目の欠落、`url` / `port` の不正(`port` が範囲外・文字列・真偽値・小数、`url` が `javascript:` など)がある要素は
+  警告を出して読み飛ばす。起動は継続する。
 - ファイルが無い/壊れていても空の一覧で起動し、警告を出す。
 
 ## GET /api/servers
@@ -58,6 +64,7 @@ docker compose up -d --build
       "name": "カタン 部屋1",
       "game": "catan",
       "url": "/catan1/",
+      "port": null,
       "status": "idle",
       "version": "20261029-2251-b7bc7eb",
       "stale": false
@@ -67,6 +74,7 @@ docker compose up -d --build
 ```
 
 - `status`: `idle` / `waiting` / `playing` / `off`(4値。`off` は応答なし・異常を意味する)
+- `url` / `port`: `servers.json` の値をそのまま出す(無い方は `null`)。内部URL(`health`)は含めない。
 - `version`: health の version 文字列(文字列でなければ null)
 - `stale`: 同じ game の中で最大 version より小さい(=古い)サーバーへの `true`
 - 巡回が一度も終わっていない間は `updated: null` / `servers: []`

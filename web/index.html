@@ -108,7 +108,12 @@ function render(){
     }else{
       var a=document.createElement("a");
       a.className="go";
-      a.href=s.url;
+      // リンク先: url があればそれを使い、無ければ port から組み立てる。
+      if(s.url){
+        a.setAttribute("href", s.url);
+      }else if(s.port!==null && s.port!==undefined){
+        a.setAttribute("href", location.protocol+"//"+location.hostname+":"+s.port+"/");
+      }
       a.textContent=s.status==="playing"?"観戦する":"入る";
       li.appendChild(a);
     }

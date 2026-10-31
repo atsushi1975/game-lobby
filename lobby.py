@@ -24,7 +24,7 @@ STATUS_RANK = {"waiting": 0, "idle": 1, "playing": 2, "off": 3}
 DEFAULT_POLL_SEC = 5.0
 DEFAULT_TIMEOUT_SEC = 2.0
 MAX_BODY_BYTES = 4096
-REQUIRED_FIELDS = ("game", "health", "url")
+REQUIRED_FIELDS = ("game", "health")
 _VERSION_RE = re.compile(r"^(\d{8})-(\d{4})-([0-9a-fA-F]+)$")
 
 
@@ -100,10 +100,23 @@ def display_name(server, title):
     return hostname_of(server.get("health") or server.get("url") or "")
 
 
-def load_servers(path):
-    """servers.json を読む。形式: [ {"name":..., "game":..., "health":..., "url":...}, ... ]
+def valid_url(value):
+    """リンク先として許可する url: "http://" / "https://" / "/" で始まる文字列のみ。"""
+    return isinstance(value, str) and (
+        value.startswith("http://") or value.startswith("https://") or value.startswith("/")
+    )
 
-    - 必須項目(game / health / url)が欠けた要素は警告を出して読み飛ばす(起動は継続)
+
+def valid_port(value):
+    """リンク先の port: 整数 1〜65535 のみ(bool は除外)。"""
+    return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 65535
+
+
+def load_servers(path):
+    """servers.json を読む。形式: [ {"name":..., "game":..., "health":..., "url":...|"port":...}, ... ]
+
+    - game / health は必須。url / port はどちらか1つ以上必要(両方あれば両方保持し、画面側は url 優先)
+    - 必須項目の欠落・url/port の不正がある要素は警告を出して読み飛ばす(起動は継続)
     - ファイルが無い/壊れていれば空の一覧で返す(呼び出し側が警告を出す)
     """
     if not os.path.exists(path):
@@ -123,16 +136,27 @@ def load_servers(path):
         if not isinstance(entry, dict):
             _warn("servers file %s: entry %d is not an object -> skipped" % (path, i))
             continue
-        missing = [k for k in REQUIRED_FIELDS if not entry.get(k)]
-        if missing:
-            _warn("servers file %s: entry %d missing %s -> skipped" % (path, i, ", ".join(missing)))
+        problems = [k for k in REQUIRED_FIELDS if not entry.get(k)]
+        url = entry.get("url")
+        port = entry.get("port")
+        has_url = url is not None
+        has_port = port is not None
+        if not has_url and not has_port:
+            problems.append("url or port")
+        if has_url and not valid_url(url):
+            problems.append("url")
+        if has_port and not valid_port(port):
+            problems.append("port")
+        if problems:
+            _warn("servers file %s: entry %d invalid %s -> skipped" % (path, i, ", ".join(problems)))
             continue
         name = entry.get("name")
         servers.append({
             "name": name if isinstance(name, str) and name else None,
             "game": entry["game"],
             "health": entry["health"],
-            "url": entry["url"],
+            "url": url if has_url else None,
+            "port": port if has_port else None,
         })
     return servers
 
@@ -184,7 +208,8 @@ class LobbyPoller:
             api_entries.append({
                 "name": res["name"],
                 "game": server["game"],
-                "url": server["url"],
+                "url": server.get("url"),
+                "port": server.get("port"),
                 "status": res["status"],
                 "version": res["version"],
                 "stale": False,

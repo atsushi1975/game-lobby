@@ -9,7 +9,7 @@
 python3 server.py
 ```
 
-- 待ち受け: 0.0.0.0:8080(環境変数 `LOBBY_PORT` で変更可)
+- 待ち受け: 0.0.0.0:80(環境変数 `LOBBY_PORT` で変更可)
 - ゲームサーバー一覧: `GET /api/servers`
 
 ## Docker
@@ -18,14 +18,14 @@ python3 server.py
 docker compose up -d --build
 ```
 
-- ポート: 8080(`LOBBY_PORT` で変更可)
+- ポート: 80(`LOBBY_PORT` で変更可)
 - `servers.json` はホスト側 `./servers.json` を `/app/servers.json` に mount する想定(`docker-compose.yml`)。無くても空の一覧で起動する。
 
 ## 環境変数
 
 | 変数 | 既定 | 説明 |
 | --- | --- | --- |
-| `LOBBY_PORT` | `8080` | ロビーが待ち受けるポート |
+| `LOBBY_PORT` | `80` | ロビーが待ち受けるポート |
 | `LOBBY_SERVERS` | `./servers.json` | 巡回対象のゲームサーバー一覧ファイル |
 | `LOBBY_POLL_SEC` | `5` | 状態を再取得する間隔(秒) |
 

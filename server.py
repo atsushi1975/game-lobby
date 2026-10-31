@@ -66,7 +66,7 @@ def main():
     p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=None)
     args = p.parse_args()
-    port = args.port if args.port is not None else int(os.environ.get("LOBBY_PORT", "8080"))
+    port = args.port if args.port is not None else int(os.environ.get("LOBBY_PORT", "80"))
     servers = load_servers(os.environ.get("LOBBY_SERVERS", "./servers.json"))
     poller = LobbyPoller(servers)
     LobbyHandler.poller = poller

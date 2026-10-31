@@ -4,9 +4,9 @@ services:
     image: game-lobby
     container_name: game-lobby
     ports:
-      - "8080:8080"
+      - "80:80"
     environment:
-      LOBBY_PORT: "8080"
+      LOBBY_PORT: "80"
       LOBBY_SERVERS: /app/servers.json
     volumes:
       - ./servers.json:/app/servers.json:ro

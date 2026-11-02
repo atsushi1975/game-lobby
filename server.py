@@ -16,6 +16,16 @@ from lobby import LobbyPoller, load_servers, lobby_version
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 HTML_PATH = os.path.join(WEB_DIR, "index.html")
+STATIC_DIR = os.path.join(WEB_DIR, "static")
+STATIC_TYPES = {
+    "favicon.svg": "image/svg+xml",
+    "favicon.ico": "image/x-icon",
+    "favicon-16x16.png": "image/png",
+    "favicon-32x32.png": "image/png",
+    "apple-touch-icon.png": "image/png",
+    "icon-192.png": "image/png",
+    "icon-512.png": "image/png",
+}
 
 
 class LobbyHandler(BaseHTTPRequestHandler):
@@ -26,6 +36,8 @@ class LobbyHandler(BaseHTTPRequestHandler):
         path = parsed.path
         if path in ("/", "/index.html"):
             self._serve_html()
+        elif path.startswith("/static/"):
+            self._serve_static(path[len("/static/"):])
         elif path == "/health":
             self._send_json(200, {"title": "ゲームロビー", "version": lobby_version(), "status": "idle"})
         elif path == "/api/servers":
@@ -42,6 +54,22 @@ class LobbyHandler(BaseHTTPRequestHandler):
         except Exception:
             body = "<html><body><h1>ゲームロビー</h1><p>web/index.html が見つかりません。</p></body></html>".encode("utf-8")
             ctype = "text/html; charset=utf-8"
+        self._send_bytes(200, ctype, body)
+
+    def _serve_static(self, name):
+        if name not in STATIC_TYPES or "/" in name or "\\" in name:
+            self.send_response(404)
+            self.end_headers()
+            return
+        path = os.path.join(STATIC_DIR, name)
+        try:
+            with open(path, "rb") as f:
+                body = f.read()
+        except Exception:
+            self.send_response(404)
+            self.end_headers()
+            return
+        ctype = STATIC_TYPES[name]
         self._send_bytes(200, ctype, body)
 
     def _send_json(self, status, obj):

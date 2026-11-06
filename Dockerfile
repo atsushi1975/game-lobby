@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY server.py lobby.py ./
+COPY server.py lobby.py chat.py ./
 COPY web ./web
 COPY VERSION ./VERSION
 

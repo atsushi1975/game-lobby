@@ -32,22 +32,25 @@
 }
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);
   font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;line-height:1.6}
 main{max-width:560px;margin:0 auto;padding:28px 16px 40px}
 h1{font-size:1.6rem;margin:0 0 4px;letter-spacing:.02em}
 .sum{margin:0 0 20px;color:var(--sub);font-size:.95rem}
 .sum b{color:var(--ink)}
-ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.row{display:grid;grid-template-columns:7px 1fr auto;align-items:center;gap:14px;
-  background:var(--paper);border:1px solid var(--line);border-radius:6px;overflow:hidden;padding-right:14px}
-.stripe{align-self:stretch;background:var(--c)}
+ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.row{display:grid;grid-template-columns:7px minmax(0,1fr);grid-template-rows:auto auto;
+  align-items:stretch;column-gap:12px;background:var(--paper);border:1px solid var(--line);
+  border-radius:6px;overflow:hidden;padding-right:12px;min-width:0}
+.stripe{grid-row:1 / span 2;align-self:stretch;background:var(--c)}
 .row.waiting{--c:var(--wait)}.row.playing{--c:var(--play)}
 .row.idle{--c:var(--idle)}.row.off{--c:var(--off);border-style:dashed}
 .row.off .name{color:var(--sub)}
-.main{padding:12px 0}
-.name{font-size:1.15rem;font-weight:700;margin:0}
-.meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:4px;font-size:.85rem;color:var(--sub)}
+.main{grid-column:2;min-width:0;padding:11px 0 0}
+.name{font-size:1.15rem;font-weight:700;margin:0;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:4px;font-size:.85rem;color:var(--sub);
+  min-width:0;overflow-wrap:anywhere}
 .chip{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--c);font-weight:700;font-size:.9rem}
 .chip:focus-visible,.go:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .dot{width:10px;height:10px;display:inline-block;border:2px solid var(--c)}
@@ -55,25 +58,99 @@ ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .idle .dot{border-radius:50%}
 .playing .dot{background:var(--c);border-radius:2px}
 .off .dot{height:0;border-width:0 0 2px;width:12px}
-.ver{font-variant-numeric:tabular-nums;font-size:.8rem}
+.ver{font-variant-numeric:tabular-nums;font-size:.8rem;max-width:100%;overflow-wrap:anywhere}
 .old{border:1px solid var(--play);color:var(--play);border-radius:4px;padding:0 6px;font-size:.75rem}
-.go{all:unset;cursor:pointer;text-align:center;min-width:5.6em;padding:9px 14px;border-radius:6px;
+.go{all:unset;grid-column:2;display:block;box-sizing:border-box;width:100%;cursor:pointer;text-align:center;
+  padding:8px 10px;margin:9px 0 11px;border-radius:6px;
   font-weight:700;font-size:.95rem;background:var(--c);color:var(--paper)}
 .row.off .go{background:transparent;color:var(--off);border:1px solid var(--line);cursor:default}
 .note{margin-top:22px;font-size:.8rem;color:var(--sub)}
+.who{margin:0 0 16px}
+.who-view{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;font-size:.95rem;color:var(--sub)}
+.who-view b{color:var(--ink)}
+.who-edit{all:unset;cursor:pointer;border:1px solid var(--line);border-radius:5px;padding:3px 10px;
+  font-size:.8rem;color:var(--ink);background:var(--paper)}
+.who-edit:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.who-form{margin:0}
+.who-form label{display:block;font-size:.85rem;color:var(--sub);margin-bottom:4px}
+.who-row{display:flex;gap:8px}
+.who-row input{flex:1;min-width:0;font:inherit;font-size:.95rem;padding:7px 9px;border:1px solid var(--line);
+  border-radius:5px;background:var(--paper);color:var(--ink)}
+.who-row button{all:unset;cursor:pointer;flex:0 0 auto;padding:7px 14px;border-radius:5px;
+  background:var(--ink);color:var(--bg);font-weight:700;font-size:.9rem}
+.who-row button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.who-error{margin:4px 0 0;min-height:1.2em;font-size:.78rem;color:var(--play)}
+.chat{margin-top:24px}
+.chat-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 10px;margin-bottom:6px}
+.chat-head h2{font-size:1.1rem;margin:0}
+.chat-note{font-size:.75rem;color:var(--sub)}
+.chat-log{height:40vh;min-height:140px;overflow-y:auto;overscroll-behavior:contain;background:var(--paper);
+  border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.chat-log:empty::before{content:"まだメッセージはありません";color:var(--sub);font-size:.85rem}
+.chat-msg{min-width:0}
+.chat-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:.75rem;color:var(--sub)}
+.chat-name{font-weight:700;color:var(--ink);overflow-wrap:anywhere}
+.chat-time{font-variant-numeric:tabular-nums}
+.chat-text{margin:1px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.92rem}
+.chat-form{display:flex;gap:8px;margin-top:8px}
+.chat-form input{flex:1 1 auto;min-width:0;font:inherit;font-size:.95rem;padding:8px 10px;
+  border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)}
+.chat-form input:disabled{opacity:.6}
+.chat-form button{all:unset;cursor:pointer;flex:0 0 auto;padding:8px 16px;border-radius:6px;
+  background:var(--ink);color:var(--bg);font-weight:700;font-size:.9rem;text-align:center}
+.chat-form button:disabled{opacity:.5;cursor:default}
+.chat-form button:focus-visible,.chat-form input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.chat-status{margin:4px 0 0;min-height:1.2em;font-size:.75rem;color:var(--sub)}
 </style>
 </head>
 <body>
 <main>
   <h1>ゲームロビー</h1>
+  <section class="who" id="who">
+    <div class="who-view" id="whoView" hidden>
+      <span>呼び名: <b id="whoName"></b></span>
+      <button class="who-edit" id="whoChange" type="button">変更</button>
+    </div>
+    <form class="who-form" id="whoForm" hidden>
+      <label for="whoInput">呼び名を入力してください（1〜16文字）</label>
+      <div class="who-row">
+        <input id="whoInput" type="text" maxlength="16" autocomplete="nickname" enterkeyhint="done">
+        <button type="submit">登録</button>
+      </div>
+      <p class="who-error" id="whoError" role="alert"></p>
+    </form>
+  </section>
   <p class="sum" id="sum"></p>
   <ul id="list"></ul>
+  <section class="chat" aria-label="チャット">
+    <div class="chat-head">
+      <h2>チャット</h2>
+      <span class="chat-note">最後の書き込みから10分で全部消えます（保存されません）</span>
+    </div>
+    <div class="chat-log" id="chatLog" role="log" aria-live="polite"></div>
+    <form class="chat-form" id="chatForm">
+      <input id="chatInput" type="text" maxlength="200" autocomplete="off" placeholder="メッセージ">
+      <button id="chatSend" type="submit">送信</button>
+    </form>
+    <p class="chat-status" id="chatStatus"></p>
+  </section>
   <p class="note" id="note"></p>
 </main>
 <script>
 var LABEL={idle:"アイドル",waiting:"開始待ち",playing:"プレイ中",off:"停止中"};
 var ORDER={waiting:0,idle:1,playing:2,off:3};
 var servers=[];
+
+var NAME_KEY="lobby_name";
+var NAME_MAX=16;
+var playerName="";
+try{
+  var savedName=localStorage.getItem(NAME_KEY);
+  if(savedName!==null){
+    savedName=savedName.trim();
+    if(savedName && savedName.length<=NAME_MAX) playerName=savedName;
+  }
+}catch(e){}
 
 // 複数ルーム型 = /health が playing_rooms を整数で返すサーバー(犯人は踊る)。
 function isMulti(s){
@@ -99,6 +176,170 @@ function setNote(text, iso){
   noteEl.appendChild(ts);
 }
 setNote("", null);
+
+var whoView=document.getElementById("whoView");
+var whoName=document.getElementById("whoName");
+var whoForm=document.getElementById("whoForm");
+var whoInput=document.getElementById("whoInput");
+var whoError=document.getElementById("whoError");
+var whoChange=document.getElementById("whoChange");
+var chatLog=document.getElementById("chatLog");
+var chatForm=document.getElementById("chatForm");
+var chatInput=document.getElementById("chatInput");
+var chatSend=document.getElementById("chatSend");
+var chatStatus=document.getElementById("chatStatus");
+
+var chatEpoch=null;
+var chatLastId=0;
+var chatSending=false;
+var chatBusy=false;
+
+function showWhoView(){
+  whoView.hidden=!playerName;
+  whoForm.hidden=!!playerName;
+  whoName.textContent=playerName;
+  chatInput.disabled=!playerName;
+  chatSend.disabled=!playerName || chatSending;
+  chatInput.placeholder=playerName?"メッセージ":"先に呼び名を登録してください";
+}
+
+function showWhoForm(editing){
+  whoView.hidden=true;
+  whoForm.hidden=false;
+  whoInput.value=editing?playerName:"";
+  whoError.textContent="";
+  chatInput.disabled=!playerName;
+  chatSend.disabled=!playerName || chatSending;
+  chatInput.placeholder=playerName?"メッセージ":"先に呼び名を登録してください";
+  whoInput.focus();
+}
+
+whoForm.addEventListener("submit",function(ev){
+  ev.preventDefault();
+  var value=whoInput.value.trim();
+  if(!value){
+    whoError.textContent="呼び名を入力してください。";
+    return;
+  }
+  if(value.length>NAME_MAX){
+    whoError.textContent="呼び名は16文字までです。";
+    return;
+  }
+  playerName=value;
+  try{localStorage.setItem(NAME_KEY,value);}catch(e){}
+  whoError.textContent="";
+  showWhoView();
+  render();
+  pollChat();
+});
+
+whoChange.addEventListener("click",function(){showWhoForm(true);});
+
+function fmtChatTime(iso){
+  return fmtUpdated(iso);
+}
+
+function isChatNearBottom(){
+  return chatLog.scrollHeight-chatLog.scrollTop-chatLog.clientHeight<=40;
+}
+
+function clearChatLog(){
+  while(chatLog.firstChild) chatLog.removeChild(chatLog.firstChild);
+}
+
+function appendChatMessage(m){
+  var item=document.createElement("div");
+  item.className="chat-msg";
+  var meta=document.createElement("div");
+  meta.className="chat-meta";
+  var name=document.createElement("span");
+  name.className="chat-name";
+  name.textContent=(m.name===null||m.name===undefined)?"":String(m.name);
+  var time=document.createElement("span");
+  time.className="chat-time";
+  time.textContent=fmtChatTime(m.at);
+  meta.appendChild(name);
+  meta.appendChild(time);
+  var text=document.createElement("p");
+  text.className="chat-text";
+  text.textContent=(m.text===null||m.text===undefined)?"":String(m.text);
+  item.appendChild(meta);
+  item.appendChild(text);
+  chatLog.appendChild(item);
+}
+
+function pollChat(){
+  if(chatBusy || document.visibilityState!=="visible") return;
+  chatBusy=true;
+  var url="/api/chat"+(chatLastId>0?"?after="+encodeURIComponent(String(chatLastId)):"");
+  fetch(url,{cache:"no-store"}).then(function(res){
+    if(!res.ok) throw new Error("http "+res.status);
+    return res.json();
+  }).then(function(data){
+    if(!data || typeof data.epoch!=="number") return;
+    var messages=data.messages||[];
+    var atBottom=isChatNearBottom();
+    if(chatEpoch!==null && data.epoch!==chatEpoch){
+      clearChatLog();
+      chatLastId=0;
+    }
+    chatEpoch=data.epoch;
+    messages.forEach(function(m){
+      if(!m || typeof m.id!=="number" || m.id<=chatLastId) return;
+      appendChatMessage(m);
+      chatLastId=m.id;
+    });
+    if(atBottom) chatLog.scrollTop=chatLog.scrollHeight;
+    chatStatus.textContent="";
+  }).catch(function(){
+    chatStatus.textContent="チャットに接続できません";
+  }).then(function(){
+    chatBusy=false;
+  });
+}
+
+function sendChat(){
+  if(chatSending) return;
+  if(!playerName){
+    showWhoForm(false);
+    return;
+  }
+  var text=chatInput.value.trim();
+  if(!text){
+    chatInput.focus();
+    return;
+  }
+  chatSending=true;
+  chatSend.disabled=true;
+  chatStatus.textContent="";
+  fetch("/api/chat",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({name:playerName,text:text})
+  }).then(function(res){
+    if(!res.ok) throw new Error("http "+res.status);
+    return res.json();
+  }).then(function(){
+    chatInput.value="";
+    pollChat();
+  }).catch(function(){
+    chatStatus.textContent="送信できませんでした";
+  }).then(function(){
+    chatSending=false;
+    chatSend.disabled=!playerName;
+  });
+}
+
+chatForm.addEventListener("submit",function(ev){
+  ev.preventDefault();
+  sendChat();
+});
+
+if(playerName){
+  showWhoView();
+}else{
+  showWhoForm(false);
+}
 
 function render(){
   var rows=servers.slice().sort(function(a,b){return ORDER[a.status]-ORDER[b.status];});
@@ -128,10 +369,30 @@ function render(){
       var a=document.createElement("a");
       a.className="go";
       // リンク先: url があればそれを使い、無ければ port から組み立てる。
+      var href=null;
       if(s.url){
-        a.setAttribute("href", s.url);
+        href=s.url;
       }else if(s.port!==null && s.port!==undefined){
-        a.setAttribute("href", location.protocol+"//"+location.hostname+":"+s.port+"/");
+        href=location.protocol+"//"+location.hostname+":"+s.port+"/";
+      }
+      if(href!==null){
+        // 本番はゲームと別オリジンなので、呼び名は URL クエリで渡す。
+        if(playerName){
+          try{
+            var u=new URL(href,location.href);
+            var hash=u.hash;
+            u.hash="";
+            // 既存のクエリはそのまま残し、name だけを encodeURIComponent で差し替える。
+            var parts=u.search.replace(/^\?/,"").split("&").filter(function(part){
+              return part && part.split("=")[0]!=="name";
+            });
+            parts.push("name="+encodeURIComponent(playerName));
+            u.search=parts.join("&");
+            u.hash=hash;
+            href=u.href;
+          }catch(e){}
+        }
+        a.setAttribute("href",href);
       }
       // 複数ルーム型は off 以外なら常に「入る」。
       a.textContent=(!isMulti(s)&&s.status==="playing")?"観戦する":"入る";
@@ -187,17 +448,24 @@ function refresh(){
 }
 
 refresh();
+pollChat();
 var timer=null;
 function startTimer(){
   timer=setInterval(function(){ if(document.visibilityState==="visible") refresh(); },5000);
+}
+var chatTimer=null;
+function startChatTimer(){
+  chatTimer=setInterval(function(){ if(document.visibilityState==="visible") pollChat(); },2000);
 }
 document.addEventListener("visibilitychange",function(){
   if(document.visibilityState==="visible"){
     clearInterval(timer);
     refresh();
+    pollChat();
   }
 });
 startTimer();
+startChatTimer();
 </script>
 </body>
 </html>

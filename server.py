@@ -1,17 +1,20 @@
 """game-lobby: 共通ロビー HTTP server。
 
-- GET /            -> web/index.html (Cache-Control: no-store)
-- GET /health      -> ロビー自身の status (Docker healthcheck 用)
-- GET /api/servers -> ゲームサーバー一覧 (巡回結果のキャッシュを返す)
+- GET  /            -> web/index.html (Cache-Control: no-store)
+- GET  /health      -> ロビー自身の status (Docker healthcheck 用)
+- GET  /api/servers -> ゲームサーバー一覧 (巡回結果のキャッシュを返す)
+- GET  /api/chat    -> メモリ内チャットの履歴 (after より大きい id だけ)
+- POST /api/chat    -> メモリ内チャットに1件追加
 """
 import json
 import os
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from chat import CHAT_BODY_MAX, ChatError, ChatStore
 from lobby import LobbyPoller, load_servers, lobby_version
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
@@ -30,6 +33,7 @@ STATIC_TYPES = {
 
 class LobbyHandler(BaseHTTPRequestHandler):
     poller = None
+    chat = ChatStore()
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -43,8 +47,52 @@ class LobbyHandler(BaseHTTPRequestHandler):
         elif path == "/api/servers":
             updated, entries = self.poller.snapshot()
             self._send_json(200, {"updated": updated, "servers": entries})
+        elif path == "/api/chat":
+            self._get_chat(parsed)
         else:
             self._send_json(404, {"status": "error", "message": "not_found"})
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/chat":
+            self._post_chat()
+        else:
+            self._send_json(404, {"status": "error", "message": "not_found"})
+
+    def _get_chat(self, parsed):
+        query = parse_qs(parsed.query)
+        raw_after = query.get("after", [None])[0]
+        after = None
+        if raw_after is not None:
+            try:
+                after = int(raw_after)
+            except (TypeError, ValueError):
+                after = None
+        self._send_json(200, self.chat.snapshot(after))
+
+    def _post_chat(self):
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except (TypeError, ValueError):
+            length = 0
+        if length < 0:
+            length = 0
+        if length > CHAT_BODY_MAX:
+            # 413 を返した後にクライアントが応答を読めるよう、小さなボディだけ読み捨てる。
+            if length <= 65536:
+                try:
+                    self.rfile.read(length)
+                except Exception:
+                    pass
+            self._send_json(413, {"status": "error", "message": "too_large"})
+            return
+        body = self.rfile.read(length) if length else b""
+        try:
+            message = self.chat.post_json(body)
+        except ChatError as e:
+            self._send_json(e.status, {"status": "error", "message": e.message})
+            return
+        self._send_json(200, message)
 
     def _serve_html(self):
         try:

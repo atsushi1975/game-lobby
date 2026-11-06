@@ -162,11 +162,11 @@ function isMulti(s){
   return typeof s.playing_rooms==="number";
 }
 
-// スマホでは version を日付(月/日)だけ表示する。形式外はそのまま。
+// スマホでは version を年/月だけ表示する。形式外はそのまま。
 function shortVersion(v){
   var m=/^(\d{4})(\d{2})(\d{2})(?:-|$)/.exec(v||"");
   if(!m) return v;
-  return parseInt(m[2],10)+"/"+parseInt(m[3],10);
+  return m[1]+"/"+parseInt(m[2],10);
 }
 
 function fmtUpdated(iso){

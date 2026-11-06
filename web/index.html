@@ -40,29 +40,34 @@ h1{font-size:1.6rem;margin:0 0 4px;letter-spacing:.02em}
 .sum{margin:0 0 20px;color:var(--sub);font-size:.95rem}
 .sum b{color:var(--ink)}
 ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.row{display:grid;grid-template-columns:7px minmax(0,1fr);grid-template-rows:auto auto;
+.row{display:grid;grid-template-columns:7px minmax(0,1fr);grid-template-rows:1fr auto;
   align-items:stretch;column-gap:12px;background:var(--paper);border:1px solid var(--line);
-  border-radius:6px;overflow:hidden;padding-right:12px;min-width:0}
+  border-radius:6px;overflow:hidden;padding-right:12px;min-width:0;line-height:1.35}
 .stripe{grid-row:1 / span 2;align-self:stretch;background:var(--c)}
 .row.waiting{--c:var(--wait)}.row.playing{--c:var(--play)}
 .row.idle{--c:var(--idle)}.row.off{--c:var(--off);border-style:dashed}
 .row.off .name{color:var(--sub)}
-.main{grid-column:2;min-width:0;padding:11px 0 0}
-.name{font-size:1.15rem;font-weight:700;margin:0;overflow-wrap:anywhere}
-.meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:4px;font-size:.85rem;color:var(--sub);
+.main{grid-column:2;min-width:0;padding:8px 0 0}
+.name{font-size:1rem;line-height:1.3;font-weight:700;margin:0;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:0 6px;margin-top:2px;font-size:.76rem;color:var(--sub);
   min-width:0;overflow-wrap:anywhere}
-.chip{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--c);font-weight:700;font-size:.9rem}
+.chip{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--c);font-weight:700;font-size:.8rem}
 .chip:focus-visible,.go:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.dot{width:10px;height:10px;display:inline-block;border:2px solid var(--c)}
+.dot{width:9px;height:9px;display:inline-block;border:2px solid var(--c)}
 .waiting .dot{background:var(--c);border-radius:50%}
 .idle .dot{border-radius:50%}
 .playing .dot{background:var(--c);border-radius:2px}
 .off .dot{height:0;border-width:0 0 2px;width:12px}
-.ver{font-variant-numeric:tabular-nums;font-size:.8rem;max-width:100%;overflow-wrap:anywhere}
-.old{border:1px solid var(--play);color:var(--play);border-radius:4px;padding:0 6px;font-size:.75rem}
-.go{all:unset;grid-column:2;display:block;box-sizing:border-box;width:100%;cursor:pointer;text-align:center;
-  padding:8px 10px;margin:9px 0 11px;border-radius:6px;
-  font-weight:700;font-size:.95rem;background:var(--c);color:var(--paper)}
+.ver{font-variant-numeric:tabular-nums;font-size:.72rem;max-width:100%;overflow-wrap:anywhere}
+.ver-short{display:none}
+@media (max-width:600px){
+  .ver-full{display:none}
+  .ver-short{display:inline}
+}
+.old{border:1px solid var(--play);color:var(--play);border-radius:4px;padding:0 4px;font-size:.7rem}
+.go{all:unset;grid-column:2;align-self:end;display:block;box-sizing:border-box;width:100%;cursor:pointer;text-align:center;
+  padding:6px 10px;margin:6px 0 8px;border-radius:6px;line-height:1.3;
+  font-weight:700;font-size:.85rem;background:var(--c);color:var(--paper)}
 .row.off .go{background:transparent;color:var(--off);border:1px solid var(--line);cursor:default}
 .note{margin-top:22px;font-size:.8rem;color:var(--sub)}
 .who{margin:0 0 16px}
@@ -155,6 +160,13 @@ try{
 // 複数ルーム型 = /health が playing_rooms を整数で返すサーバー(犯人は踊る)。
 function isMulti(s){
   return typeof s.playing_rooms==="number";
+}
+
+// スマホでは version を日付(月/日)だけ表示する。形式外はそのまま。
+function shortVersion(v){
+  var m=/^(\d{4})(\d{2})(\d{2})(?:-|$)/.exec(v||"");
+  if(!m) return v;
+  return parseInt(m[2],10)+"/"+parseInt(m[3],10);
 }
 
 function fmtUpdated(iso){
@@ -416,7 +428,15 @@ function render(){
     if(s.version){
       var ver=document.createElement("span");
       ver.className="ver";
-      ver.textContent=s.version;
+      ver.title=s.version;
+      var verFull=document.createElement("span");
+      verFull.className="ver-full";
+      verFull.textContent=s.version;
+      var verShort=document.createElement("span");
+      verShort.className="ver-short";
+      verShort.textContent=shortVersion(s.version);
+      ver.appendChild(verFull);
+      ver.appendChild(verShort);
       meta.appendChild(ver);
     }
     if(s.stale){

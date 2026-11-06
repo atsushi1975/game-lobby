@@ -35,7 +35,7 @@ docker compose up -d --build
 ```json
 [
   {
-    "name": "カタン 部屋1",
+    "name": "catan #1",
     "game": "catan",
     "health": "http://catan_001:8000/health",
     "port": 6100
@@ -62,7 +62,7 @@ docker compose up -d --build
   "updated": "2026-10-31T12:34:56.789012+00:00",
   "servers": [
     {
-      "name": "カタン 部屋1",
+      "name": "catan #1",
       "game": "catan",
       "url": "/catan1/",
       "port": null,

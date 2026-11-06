@@ -1,12 +1,12 @@
 [
   {
-    "name": "カタン 部屋1",
+    "name": "catan #1",
     "game": "catan",
     "health": "http://catan_001:8000/health",
     "port": 6100
   },
   {
-    "name": "カタン 部屋2",
+    "name": "catan #2",
     "game": "catan",
     "health": "http://catan_002:8000/health",
     "port": 6200
